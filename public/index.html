@@ -114,6 +114,10 @@ button{cursor:pointer;font-family:inherit}
 .priority-dot.low{background:var(--success)}
 .tag-due{background:var(--bg);color:var(--text-sub);font-size:11px}
 .tag-due.overdue{background:#fef2f2;color:var(--danger)}
+.tag-due.due-today{background:#fef2f2;color:var(--danger);font-weight:600}
+.tag-due-footer{background:var(--bg);color:var(--text-sub);font-size:10px;padding:2px 6px;border-radius:4px}
+.tag-due-footer.overdue{background:#fef2f2;color:var(--danger)}
+.tag-due-footer.due-today{background:#fef2f2;color:var(--danger);font-weight:600}
 .task-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
 .assignee-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
 
@@ -502,11 +506,15 @@ function renderBoard() {
 }
 
 function renderCard(t) {
-  const overdue = t.due && new Date(t.due + 'T00:00:00') < new Date(new Date().toDateString());
+  const today = new Date(new Date().toDateString());
+  const dueDate = t.due ? new Date(t.due + 'T00:00:00') : null;
+  const isToday = dueDate && dueDate.getTime() === today.getTime();
+  const overdue = dueDate && dueDate < today;
   const col = columns.find(c => c.id === t.status);
   const isDone = col && col.name.includes('完了');
-  const showOverdue = overdue && !isDone;
   const dueText = t.due ? new Date(t.due + 'T00:00:00').toLocaleDateString('ja-JP', { month:'short', day:'numeric' }) : '';
+  const dueClass = isDone ? '' : (overdue ? 'overdue' : (isToday ? 'due-today' : ''));
+  const dueIcon = !isDone && (overdue || isToday) ? '⚠ ' : '';
   const initials = t.assignee ? t.assignee.slice(0,2) : '';
   const avatarColor = t.assignee ? AVATAR_COLORS[hashStr(t.assignee) % AVATAR_COLORS.length] : '';
   const proj = projects.find(p => p.id === t.projectId);
@@ -515,11 +523,13 @@ function renderCard(t) {
       <div class="task-card-title">${esc(t.title)}</div>
       <div class="task-card-meta">
         <span class="priority-dot ${t.priority}" title="${{high:'高',medium:'中',low:'低'}[t.priority] || ''}"></span>
-${dueText ? `<span class="tag tag-due ${showOverdue?'overdue':''}">${showOverdue?'⚠ ':''}${dueText}</span>` : ''}
       </div>
       <div class="task-card-footer">
         ${proj ? `<span style="font-size:11px;color:${proj.color}">● ${esc(proj.name)}</span>` : '<span></span>'}
-        ${initials ? `<span class="assignee-avatar" style="background:${avatarColor}">${esc(initials)}</span>` : ''}
+        <div style="display:flex;align-items:center;gap:6px">
+          ${dueText ? `<span class="tag tag-due-footer ${dueClass}">${dueIcon}${dueText}</span>` : ''}
+          ${initials ? `<span class="assignee-avatar" style="background:${avatarColor}">${esc(initials)}</span>` : ''}
+        </div>
       </div>
     </div>`;
 }
