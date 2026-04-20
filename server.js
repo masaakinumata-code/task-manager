@@ -4,7 +4,7 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
@@ -172,5 +172,5 @@ function genId() {
 }
 
 app.listen(PORT, () => {
-  console.log(`TaskBoard が起動しました: http://localhost:${PORT}`);
+  console.log(`ECタスク管理 が起動しました: http://localhost:${PORT}`);
 });
