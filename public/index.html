@@ -214,18 +214,6 @@ textarea{resize:vertical;min-height:70px}
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>カテゴリ</label>
-        <select id="modal-category">
-          <option value="">なし</option>
-          <option value="仕事">仕事</option>
-          <option value="個人">個人</option>
-          <option value="勉強">勉強</option>
-          <option value="買い物">買い物</option>
-          <option value="デザイン">デザイン</option>
-          <option value="開発">開発</option>
-        </select>
-      </div>
-      <div class="form-group">
         <label>優先度</label>
         <select id="modal-priority">
           <option value="medium">中</option>
@@ -511,8 +499,7 @@ function renderCard(t) {
       <div class="task-card-title">${esc(t.title)}</div>
       <div class="task-card-meta">
         <span class="priority-dot ${t.priority}" title="${{high:'高',medium:'中',low:'低'}[t.priority] || ''}"></span>
-        ${t.category ? `<span class="tag tag-category">${esc(t.category)}</span>` : ''}
-        ${dueText ? `<span class="tag tag-due ${showOverdue?'overdue':''}">${showOverdue?'⚠ ':''}${dueText}</span>` : ''}
+${dueText ? `<span class="tag tag-due ${showOverdue?'overdue':''}">${showOverdue?'⚠ ':''}${dueText}</span>` : ''}
       </div>
       <div class="task-card-footer">
         ${proj ? `<span style="font-size:11px;color:${proj.color}">● ${esc(proj.name)}</span>` : '<span></span>'}
@@ -654,7 +641,6 @@ function openAddModal() {
   document.getElementById('modal-task-id').value = '';
   document.getElementById('modal-name').value = '';
   document.getElementById('modal-desc').value = '';
-  document.getElementById('modal-category').value = '';
   document.getElementById('modal-priority').value = 'medium';
   document.getElementById('modal-due').value = '';
   document.getElementById('modal-assignee').value = '';
@@ -675,7 +661,6 @@ function openEditModal(id) {
   document.getElementById('modal-task-id').value = id;
   document.getElementById('modal-name').value = t.title;
   document.getElementById('modal-desc').value = t.desc || '';
-  document.getElementById('modal-category').value = t.category || '';
   document.getElementById('modal-priority').value = t.priority;
   document.getElementById('modal-due').value = t.due || '';
   document.getElementById('modal-assignee').value = t.assignee || '';
@@ -699,7 +684,7 @@ async function saveTask() {
   const data = {
     title,
     desc: document.getElementById('modal-desc').value.trim(),
-    category: document.getElementById('modal-category').value,
+    category: '',
     priority: document.getElementById('modal-priority').value,
     due: document.getElementById('modal-due').value,
     assignee: document.getElementById('modal-assignee').value.trim(),
