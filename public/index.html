@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タスク管理ダッシュボード</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text x='50' y='68' font-size='55' font-weight='700' fill='white' text-anchor='middle' font-family='sans-serif'>T</text></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f2f5;--surface:#fff;--text:#1a1a2e;--text-sub:#6b7280;
+  --primary:#6366f1;--primary-light:#818cf8;--primary-bg:rgba(99,102,241,.08);
+  --danger:#ef4444;--success:#22c55e;--warning:#f59e0b;
+  --border:#e5e7eb;--shadow:0 1px 3px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.12);
+  --radius:10px;--radius-lg:14px;
+  --sidebar-w:260px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;height:100vh;overflow:hidden}
+button{cursor:pointer;font-family:inherit}
+
+/* === Layout === */
+.app{display:flex;height:100vh}
+
+/* === Sidebar === */
+.sidebar{width:var(--sidebar-w);background:#1e1b4b;color:#e0e7ff;display:flex;flex-direction:column;flex-shrink:0;transition:transform .3s ease;z-index:200}
+.sidebar-header{padding:20px 18px 12px;display:flex;align-items:center;gap:10px}
+.sidebar-logo{width:32px;height:32px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;font-weight:700}
+.sidebar-header h1{font-size:16px;font-weight:700;color:#fff}
+
+.sidebar-nav{padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-item{padding:9px 12px;border-radius:8px;font-size:14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s;color:#c7d2fe;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,.08)}
+.nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+
+.sidebar-divider{height:1px;background:rgba(255,255,255,.1);margin:8px 16px}
+
+.sidebar-section-header{padding:8px 18px 4px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#818cf8;display:flex;align-items:center;justify-content:space-between}
+.sidebar-section-header button{background:none;border:none;color:#818cf8;font-size:18px;line-height:1;padding:0 2px;cursor:pointer}
+.sidebar-section-header button:hover{color:#fff}
+
+.project-list{padding:4px 10px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.project-item{padding:8px 12px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s;color:#c7d2fe}
+.project-item:hover{background:rgba(255,255,255,.08)}
+.project-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
+.project-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.project-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-delete{opacity:0;background:none;border:none;color:#f87171;font-size:14px;padding:2px 4px;border-radius:4px;transition:opacity .15s}
+.project-item:hover .project-delete{opacity:1}
+.project-delete:hover{background:rgba(248,113,113,.15)}
+
+/* === Main === */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Header */
+.main-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.menu-toggle{display:none;background:none;border:none;font-size:22px;color:var(--text);padding:4px}
+.main-header h2{font-size:20px;font-weight:700;flex:1;display:flex;align-items:center;gap:8px}
+.header-project-dot{width:12px;height:12px;border-radius:50%}
+.header-actions{display:flex;gap:10px;align-items:center}
+.search-input{padding:8px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:200px;background:var(--bg);font-family:inherit;transition:border-color .2s}
+.search-input:focus{outline:none;border-color:var(--primary)}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-light)}
+.btn-ghost{background:transparent;color:var(--text-sub);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-danger{color:var(--danger);background:none;border:1px solid var(--danger)}
+.btn-danger:hover{background:#fef2f2}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* === Kanban Board === */
+.board{flex:1;display:flex;gap:20px;padding:24px 28px;overflow-x:auto;overflow-y:hidden}
+.column{flex:1;min-width:260px;max-width:380px;display:flex;flex-direction:column;background:var(--bg);border-radius:var(--radius-lg);overflow:hidden;flex-shrink:0}
+.column-header{padding:14px 16px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;flex-shrink:0}
+.column-dot{width:10px;height:10px;border-radius:50%}
+.column-count{background:rgba(0,0,0,.08);color:var(--text-sub);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.column-header-right{margin-left:auto;display:flex;align-items:center;gap:4px}
+.column-delete{opacity:0;background:none;border:none;color:var(--text-sub);font-size:16px;padding:2px 4px;border-radius:4px;transition:all .15s;line-height:1}
+.column-header:hover .column-delete{opacity:1}
+.column-delete:hover{color:var(--danger);background:#fef2f2}
+.column-body{flex:1;padding:4px 10px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:80px}
+.column-body.drag-over{background:rgba(99,102,241,.06);border-radius:8px}
+
+/* Add Column */
+.add-column{min-width:260px;max-width:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:transparent;border:2px dashed var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s;flex-shrink:0;gap:8px;color:var(--text-sub);font-size:14px;padding:20px}
+.add-column:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+.add-column-icon{font-size:28px;line-height:1}
+
+/* Add Column Modal */
+.add-col-form{min-width:260px;max-width:380px;background:var(--surface);border-radius:var(--radius-lg);padding:16px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.add-col-form input[type="text"]{padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;transition:border-color .2s}
+.add-col-form input[type="text"]:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.color-picker-row{display:flex;gap:6px;flex-wrap:wrap}
+.color-swatch{width:28px;height:28px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:all .15s}
+.color-swatch:hover{transform:scale(1.15)}
+.color-swatch.selected{border-color:var(--text);box-shadow:0 0 0 2px var(--surface)}
+
+/* === Task Card === */
+.task-card{background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s, transform .15s;border:1px solid var(--border)}
+.task-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);transform:translateY(-1px)}
+.task-card.dragging{opacity:.4;transform:rotate(2deg)}
+.drop-indicator{height:3px;background:var(--primary);border-radius:2px;margin:2px 0;transition:opacity .15s;opacity:1}
+.task-card.drag-above{border-top:3px solid var(--primary)}
+.task-card.drag-below{border-bottom:3px solid var(--primary)}
+.task-card-title{font-size:14px;font-weight:500;margin-bottom:6px;word-break:break-word}
+.task-card-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.tag{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;white-space:nowrap}
+.tag-category{background:#ede9fe;color:#6d28d9}
+.priority-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.priority-dot.high{background:var(--danger)}
+.priority-dot.medium{background:var(--warning)}
+.priority-dot.low{background:var(--success)}
+.tag-due{background:var(--bg);color:var(--text-sub);font-size:11px}
+.tag-due.overdue{background:#fef2f2;color:var(--danger)}
+.task-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.assignee-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+
+/* === Modal === */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:520px;box-shadow:var(--shadow-lg);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:20px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.form-row{display:flex;gap:10px}
+.form-row .form-group{flex:1}
+input[type="text"],input[type="date"],select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+textarea{resize:vertical;min-height:70px}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* Project Add Inline */
+.project-add-form{padding:4px 10px;display:none;gap:4px}
+.project-add-form.show{display:flex}
+.project-add-form input{flex:1;padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-family:inherit}
+.project-add-form input:focus{outline:none;border-color:var(--primary-light)}
+.project-add-form button{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:500}
+
+/* === Responsive === */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199}
+  .sidebar-backdrop.show{display:block}
+  .menu-toggle{display:block}
+  .board{padding:16px;gap:14px}
+  .column{min-width:260px}
+  .search-input{width:140px}
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">T</div>
+      <h1>TaskBoard</h1>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-view="home" onclick="switchView('home',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        ホーム
+      </button>
+      <button class="nav-item" data-view="my" onclick="switchView('my',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        マイタスク
+      </button>
+    </nav>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section-header">
+      <span>プロジェクト</span>
+      <button onclick="toggleProjectAdd()" title="プロジェクト追加">+</button>
+    </div>
+    <div class="project-add-form" id="project-add-form">
+      <input type="text" id="new-project-name" placeholder="プロジェクト名" onkeydown="if(event.key==='Enter')addProject()">
+      <button onclick="addProject()">追加</button>
+    </div>
+    <div class="project-list" id="project-list"></div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="main-header">
+      <button class="menu-toggle" onclick="toggleSidebar()">&#9776;</button>
+      <h2 id="main-title"><span class="header-project-dot" id="header-dot"></span> <span id="header-text">すべてのタスク</span></h2>
+      <div class="header-actions">
+        <input type="text" class="search-input" id="search-input" placeholder="タスクを検索..." oninput="renderBoard()">
+        <button class="btn btn-primary" onclick="openAddModal()">+ タスク追加</button>
+      </div>
+    </header>
+    <div class="board" id="board"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <h2 id="modal-title">タスクを追加</h2>
+    <input type="hidden" id="modal-task-id">
+    <div class="form-group">
+      <label>タスク名</label>
+      <input type="text" id="modal-name" placeholder="タスク名を入力...">
+    </div>
+    <div class="form-group">
+      <label>説明</label>
+      <textarea id="modal-desc" placeholder="説明（任意）"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>カテゴリ</label>
+        <select id="modal-category">
+          <option value="">なし</option>
+          <option value="仕事">仕事</option>
+          <option value="個人">個人</option>
+          <option value="勉強">勉強</option>
+          <option value="買い物">買い物</option>
+          <option value="デザイン">デザイン</option>
+          <option value="開発">開発</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>優先度</label>
+        <select id="modal-priority">
+          <option value="medium">中</option>
+          <option value="high">高</option>
+          <option value="low">低</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>期限</label>
+        <input type="date" id="modal-due">
+      </div>
+      <div class="form-group">
+        <label>担当者</label>
+        <input type="text" id="modal-assignee" placeholder="名前">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>ステータス</label>
+        <select id="modal-status"></select>
+      </div>
+      <div class="form-group">
+        <label>プロジェクト</label>
+        <select id="modal-project"></select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-danger" id="modal-delete-btn" style="margin-right:auto;display:none" onclick="deleteTask()">削除</button>
+      <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveTask()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLUMN_COLORS = ['#6366f1','#f59e0b','#ef4444','#22c55e','#ec4899','#8b5cf6','#06b6d4','#14b8a6','#84cc16','#f97316'];
+const PROJECT_COLORS = ['#6366f1','#ec4899','#14b8a6','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16'];
+const AVATAR_COLORS = ['#6366f1','#ec4899','#14b8a6','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#84cc16'];
+
+let columns = [];
+let projects = [];
+let tasks = [];
+
+let currentView = 'home';
+let currentProjectId = null;
+let addingColumn = false;
+let selectedNewColColor = COLUMN_COLORS[0];
+
+// === API ヘルパー ===
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// === 初期化 ===
+async function init() {
+  columns = await api('/api/columns');
+  projects = await api('/api/projects');
+  tasks = await api('/api/tasks');
+  updateHeader('すべてのタスク', '');
+  document.getElementById('header-dot').style.display = 'none';
+  renderProjects();
+  renderStatusSelect();
+  renderBoard();
+}
+
+// === 定期同期（他ユーザーの変更を反映）===
+setInterval(async () => {
+  columns = await api('/api/columns');
+  projects = await api('/api/projects');
+  tasks = await api('/api/tasks');
+  renderProjects();
+  renderBoard();
+}, 5000);
+
+// === Sidebar ===
+function renderProjects() {
+  const list = document.getElementById('project-list');
+  list.innerHTML = projects.map(p => `
+    <div class="project-item ${currentView === p.id ? 'active' : ''}" onclick="selectProject('${p.id}')">
+      <span class="project-dot" style="background:${p.color}"></span>
+      <span class="project-name">${esc(p.name)}</span>
+      <button class="project-delete" onclick="event.stopPropagation();deleteProject('${p.id}')" title="削除">&times;</button>
+    </div>
+  `).join('');
+}
+
+function selectProject(id) {
+  currentView = id;
+  currentProjectId = id;
+  const p = projects.find(x => x.id === id);
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  updateHeader(p ? p.name : '', p ? p.color : '');
+  renderProjects();
+  renderBoard();
+  closeSidebarMobile();
+}
+
+function switchView(view, el) {
+  currentView = view;
+  currentProjectId = null;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderProjects();
+  if (view === 'home') updateHeader('すべてのタスク', '');
+  else updateHeader('マイタスク', '');
+  renderBoard();
+  closeSidebarMobile();
+}
+
+function updateHeader(text, color) {
+  document.getElementById('header-text').textContent = text;
+  const dot = document.getElementById('header-dot');
+  if (color) { dot.style.background = color; dot.style.display = 'inline-block'; }
+  else { dot.style.display = 'none'; }
+}
+
+function toggleProjectAdd() {
+  const form = document.getElementById('project-add-form');
+  form.classList.toggle('show');
+  if (form.classList.contains('show')) document.getElementById('new-project-name').focus();
+}
+
+async function addProject() {
+  const inp = document.getElementById('new-project-name');
+  const name = inp.value.trim();
+  if (!name) return;
+  const color = PROJECT_COLORS[projects.length % PROJECT_COLORS.length];
+  const proj = await api('/api/projects', 'POST', { name, color });
+  projects.push(proj);
+  inp.value = '';
+  document.getElementById('project-add-form').classList.remove('show');
+  renderProjects();
+  renderStatusSelect();
+}
+
+async function deleteProject(id) {
+  if (!confirm('このプロジェクトを削除しますか？関連タスクは残ります。')) return;
+  await api('/api/projects/' + id, 'DELETE');
+  projects = projects.filter(p => p.id !== id);
+  if (currentView === id) switchView('home', document.querySelector('.nav-item[data-view="home"]'));
+  else { renderProjects(); renderStatusSelect(); }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('show');
+}
+function closeSidebarMobile() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('show');
+}
+
+// === Columns Management ===
+async function addColumn(name, color) {
+  const col = await api('/api/columns', 'POST', { name, color });
+  columns.push(col);
+  addingColumn = false;
+  renderBoard();
+  renderStatusSelect();
+}
+
+async function deleteColumn(colId) {
+  const col = columns.find(c => c.id === colId);
+  const taskCount = tasks.filter(t => t.status === colId).length;
+  let msg = `「${col.name}」カラムを削除しますか？`;
+  if (taskCount > 0) {
+    msg += `\n\nこのカラムには ${taskCount} 件のタスクがあります。タスクは最初のカラムに移動されます。`;
+  }
+  if (!confirm(msg)) return;
+  await api('/api/columns/' + colId, 'DELETE');
+  // サーバー側でタスク移動済み。再取得
+  columns = await api('/api/columns');
+  tasks = await api('/api/tasks');
+  renderBoard();
+  renderStatusSelect();
+}
+
+function showAddColumnForm() {
+  addingColumn = true;
+  selectedNewColColor = COLUMN_COLORS[columns.length % COLUMN_COLORS.length];
+  renderBoard();
+  setTimeout(() => {
+    const input = document.getElementById('new-col-name');
+    if (input) input.focus();
+  }, 50);
+}
+
+function hideAddColumnForm() {
+  addingColumn = false;
+  renderBoard();
+}
+
+function selectColColor(color) {
+  selectedNewColColor = color;
+  document.querySelectorAll('.color-swatch').forEach(el => {
+    el.classList.toggle('selected', el.dataset.color === color);
+  });
+}
+
+function submitNewColumn() {
+  const input = document.getElementById('new-col-name');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  addColumn(name, selectedNewColColor);
+}
+
+// === Board ===
+function getFilteredTasks() {
+  const query = document.getElementById('search-input').value.toLowerCase();
+  return tasks.filter(t => {
+    if (currentView !== 'home' && currentView !== 'my' && t.projectId !== currentView) return false;
+    if (query && !t.title.toLowerCase().includes(query) && !(t.desc||'').toLowerCase().includes(query)) return false;
+    return true;
+  });
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  const filtered = getFilteredTasks();
+
+  let html = '';
+  columns.forEach(col => {
+    const items = filtered.filter(t => t.status === col.id)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const canDelete = columns.length > 1;
+    html += `
+      <div class="column" data-status="${col.id}">
+        <div class="column-header">
+          <span class="column-dot" style="background:${col.color}"></span>
+          ${esc(col.name)}
+          <div class="column-header-right">
+            <span class="column-count">${items.length}</span>
+            ${canDelete ? `<button class="column-delete" onclick="event.stopPropagation();deleteColumn('${col.id}')" title="カラム削除">&times;</button>` : ''}
+          </div>
+        </div>
+        <div class="column-body" id="col-${col.id}">
+          ${items.length === 0
+            ? '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">タスクなし</div>'
+            : items.map(t => renderCard(t)).join('')}
+        </div>
+      </div>`;
+  });
+
+  if (addingColumn) {
+    html += `
+      <div class="add-col-form">
+        <input type="text" id="new-col-name" placeholder="カラム名を入力..." onkeydown="if(event.key==='Enter')submitNewColumn();if(event.key==='Escape')hideAddColumnForm()">
+        <div class="color-picker-row">
+          ${COLUMN_COLORS.map(c => `<div class="color-swatch ${c === selectedNewColColor ? 'selected' : ''}" style="background:${c}" data-color="${c}" onclick="selectColColor('${c}')"></div>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="submitNewColumn()">追加</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="hideAddColumnForm()">キャンセル</button>
+        </div>
+      </div>`;
+  } else {
+    html += `
+      <div class="add-column" onclick="showAddColumnForm()">
+        <span class="add-column-icon">+</span>
+        カラムを追加
+      </div>`;
+  }
+
+  board.innerHTML = html;
+}
+
+function renderCard(t) {
+  const overdue = t.due && new Date(t.due + 'T00:00:00') < new Date(new Date().toDateString());
+  const col = columns.find(c => c.id === t.status);
+  const isDone = col && col.name.includes('完了');
+  const showOverdue = overdue && !isDone;
+  const dueText = t.due ? new Date(t.due + 'T00:00:00').toLocaleDateString('ja-JP', { month:'short', day:'numeric' }) : '';
+  const initials = t.assignee ? t.assignee.slice(0,2) : '';
+  const avatarColor = t.assignee ? AVATAR_COLORS[hashStr(t.assignee) % AVATAR_COLORS.length] : '';
+  const proj = projects.find(p => p.id === t.projectId);
+  return `
+    <div class="task-card" draggable="true" data-id="${t.id}" onclick="openEditModal('${t.id}')">
+      <div class="task-card-title">${esc(t.title)}</div>
+      <div class="task-card-meta">
+        <span class="priority-dot ${t.priority}" title="${{high:'高',medium:'中',low:'低'}[t.priority] || ''}"></span>
+        ${t.category ? `<span class="tag tag-category">${esc(t.category)}</span>` : ''}
+        ${dueText ? `<span class="tag tag-due ${showOverdue?'overdue':''}">${showOverdue?'⚠ ':''}${dueText}</span>` : ''}
+      </div>
+      <div class="task-card-footer">
+        ${proj ? `<span style="font-size:11px;color:${proj.color}">● ${esc(proj.name)}</span>` : '<span></span>'}
+        ${initials ? `<span class="assignee-avatar" style="background:${avatarColor}">${esc(initials)}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// === Drag & Drop ===
+let dragTaskId = null;
+let dragRafId = null;
+let currentIndicator = null;
+
+function getDropTarget(col, y) {
+  const cards = [...col.querySelectorAll('.task-card:not(.dragging)')];
+  for (let i = 0; i < cards.length; i++) {
+    const rect = cards[i].getBoundingClientRect();
+    if (y < rect.top + rect.height / 2) {
+      return { el: cards[i], before: true, index: i };
+    }
+  }
+  return { el: null, before: false, index: cards.length };
+}
+
+function clearDropIndicators() {
+  if (currentIndicator) {
+    if (currentIndicator.el) {
+      currentIndicator.el.classList.remove('drag-above', 'drag-below');
+    }
+    if (currentIndicator.col) {
+      currentIndicator.col.classList.remove('drag-over');
+    }
+    currentIndicator = null;
+  }
+}
+
+function setDropIndicator(col, target) {
+  if (currentIndicator) {
+    if (target.el && currentIndicator.el === target.el && currentIndicator.before === target.before) return;
+    if (!target.el && !currentIndicator.el && currentIndicator.col === col) return;
+  }
+  clearDropIndicators();
+  if (target.el) {
+    target.el.classList.add(target.before ? 'drag-above' : 'drag-below');
+    currentIndicator = { el: target.el, before: target.before, col: null };
+  } else {
+    col.classList.add('drag-over');
+    currentIndicator = { el: null, before: false, col: col };
+  }
+}
+
+async function reorderTasks(taskId, newStatus, insertIndex) {
+  // ローカルで即時反映
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  task.status = newStatus;
+  const colTasks = tasks.filter(t => t.status === newStatus && t.id !== taskId)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  colTasks.splice(insertIndex, 0, task);
+  colTasks.forEach((t, i) => { t.order = i; });
+  renderBoard();
+  // サーバーに同期
+  await api('/api/tasks/reorder', 'PUT', { taskId, newStatus, insertIndex });
+}
+
+(function initDragAndDrop() {
+  const board = document.getElementById('board');
+
+  board.addEventListener('dragstart', e => {
+    const card = e.target.closest('.task-card');
+    if (!card) return;
+    dragTaskId = card.dataset.id;
+    e.dataTransfer.setData('text/plain', card.dataset.id);
+    e.dataTransfer.effectAllowed = 'move';
+    requestAnimationFrame(() => card.classList.add('dragging'));
+  });
+
+  board.addEventListener('dragend', e => {
+    const card = e.target.closest('.task-card');
+    if (card) card.classList.remove('dragging');
+    clearDropIndicators();
+    dragTaskId = null;
+    if (dragRafId) { cancelAnimationFrame(dragRafId); dragRafId = null; }
+  });
+
+  board.addEventListener('dragover', e => {
+    const col = e.target.closest('.column-body');
+    if (!col) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const clientY = e.clientY;
+    if (dragRafId) return;
+    dragRafId = requestAnimationFrame(() => {
+      dragRafId = null;
+      const target = getDropTarget(col, clientY);
+      setDropIndicator(col, target);
+    });
+  });
+
+  board.addEventListener('dragleave', e => {
+    const col = e.target.closest('.column-body');
+    if (col && !col.contains(e.relatedTarget)) clearDropIndicators();
+  });
+
+  board.addEventListener('drop', e => {
+    const col = e.target.closest('.column-body');
+    if (!col) return;
+    e.preventDefault();
+    clearDropIndicators();
+    const taskId = e.dataTransfer.getData('text/plain');
+    const newStatus = col.id.replace('col-', '');
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const target = getDropTarget(col, e.clientY);
+    reorderTasks(taskId, newStatus, target.index);
+  });
+})();
+
+// === Modal ===
+function renderStatusSelect() {
+  const sel = document.getElementById('modal-status');
+  sel.innerHTML = columns.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+
+function renderProjectSelect() {
+  const sel = document.getElementById('modal-project');
+  sel.innerHTML = '<option value="">プロジェクトなし</option>' +
+    projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+}
+
+function openAddModal() {
+  document.getElementById('modal-title').textContent = 'タスクを追加';
+  document.getElementById('modal-task-id').value = '';
+  document.getElementById('modal-name').value = '';
+  document.getElementById('modal-desc').value = '';
+  document.getElementById('modal-category').value = '';
+  document.getElementById('modal-priority').value = 'medium';
+  document.getElementById('modal-due').value = '';
+  document.getElementById('modal-assignee').value = '';
+  document.getElementById('modal-delete-btn').style.display = 'none';
+  renderStatusSelect();
+  document.getElementById('modal-status').value = columns.length > 0 ? columns[0].id : '';
+  renderProjectSelect();
+  const projSel = document.getElementById('modal-project');
+  projSel.value = (currentView !== 'home' && currentView !== 'my') ? currentView : '';
+  document.getElementById('task-modal').classList.add('show');
+  setTimeout(() => document.getElementById('modal-name').focus(), 100);
+}
+
+function openEditModal(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('modal-title').textContent = 'タスクを編集';
+  document.getElementById('modal-task-id').value = id;
+  document.getElementById('modal-name').value = t.title;
+  document.getElementById('modal-desc').value = t.desc || '';
+  document.getElementById('modal-category').value = t.category || '';
+  document.getElementById('modal-priority').value = t.priority;
+  document.getElementById('modal-due').value = t.due || '';
+  document.getElementById('modal-assignee').value = t.assignee || '';
+  document.getElementById('modal-delete-btn').style.display = 'inline-flex';
+  renderStatusSelect();
+  document.getElementById('modal-status').value = t.status;
+  renderProjectSelect();
+  document.getElementById('modal-project').value = t.projectId || '';
+  document.getElementById('task-modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('task-modal').classList.remove('show');
+}
+
+async function saveTask() {
+  const id = document.getElementById('modal-task-id').value;
+  const title = document.getElementById('modal-name').value.trim();
+  if (!title) { document.getElementById('modal-name').focus(); return; }
+
+  const data = {
+    title,
+    desc: document.getElementById('modal-desc').value.trim(),
+    category: document.getElementById('modal-category').value,
+    priority: document.getElementById('modal-priority').value,
+    due: document.getElementById('modal-due').value,
+    assignee: document.getElementById('modal-assignee').value.trim(),
+    status: document.getElementById('modal-status').value,
+    projectId: document.getElementById('modal-project').value
+  };
+
+  if (id) {
+    const updated = await api('/api/tasks/' + id, 'PUT', data);
+    const idx = tasks.findIndex(t => t.id === id);
+    if (idx >= 0) Object.assign(tasks[idx], updated);
+  } else {
+    const task = await api('/api/tasks', 'POST', data);
+    tasks.unshift(task);
+  }
+  closeModal();
+  renderBoard();
+}
+
+async function deleteTask() {
+  const id = document.getElementById('modal-task-id').value;
+  if (!id) return;
+  if (!confirm('このタスクを削除しますか？')) return;
+  await api('/api/tasks/' + id, 'DELETE');
+  tasks = tasks.filter(t => t.id !== id);
+  closeModal();
+  renderBoard();
+}
+
+// === Utils ===
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Close modal on overlay click or Escape
+document.getElementById('task-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Init
+init();
+</script>
+</body>
+</html>
