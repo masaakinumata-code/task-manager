@@ -99,6 +99,8 @@ button{cursor:pointer;font-family:inherit}
 
 /* === Task Card === */
 .task-card{background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);cursor:grab;transition:box-shadow .15s, transform .15s;border:1px solid var(--border)}
+.task-card.due-today-card{background:#fef2f2;border-color:#fca5a5}
+.task-card.overdue-card{background:#fef2f2;border-color:#fca5a5}
 .task-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);transform:translateY(-1px)}
 .task-card.dragging{opacity:.4;transform:rotate(2deg)}
 .drop-indicator{height:3px;background:var(--primary);border-radius:2px;margin:2px 0;transition:opacity .15s;opacity:1}
@@ -518,8 +520,9 @@ function renderCard(t) {
   const initials = t.assignee ? t.assignee.slice(0,2) : '';
   const avatarColor = t.assignee ? AVATAR_COLORS[hashStr(t.assignee) % AVATAR_COLORS.length] : '';
   const proj = projects.find(p => p.id === t.projectId);
+  const cardClass = !isDone && isToday ? ' due-today-card' : (!isDone && overdue ? ' overdue-card' : '');
   return `
-    <div class="task-card" draggable="true" data-id="${t.id}" onclick="openEditModal('${t.id}')">
+    <div class="task-card${cardClass}" draggable="true" data-id="${t.id}" onclick="openEditModal('${t.id}')">
       <div class="task-card-title">${esc(t.title)}</div>
       <div class="task-card-meta">
         <span class="priority-dot ${t.priority}" title="${{high:'高',medium:'中',low:'低'}[t.priority] || ''}"></span>
