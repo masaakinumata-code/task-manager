@@ -178,6 +178,7 @@ textarea{resize:vertical;min-height:70px}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         マイタスク
       </button>
+      <div id="my-name-display" style="padding:4px 12px;font-size:11px;color:#818cf8;cursor:pointer" onclick="changeMyName()" title="名前を変更"></div>
     </nav>
     <div class="sidebar-divider"></div>
     <div class="sidebar-section-header">
@@ -269,6 +270,37 @@ let currentView = 'home';
 let currentProjectId = null;
 let addingColumn = false;
 let selectedNewColColor = COLUMN_COLORS[0];
+let myName = localStorage.getItem('myName') || '';
+
+function ensureMyName() {
+  if (!myName) {
+    const name = prompt('あなたの名前を入力してください（マイタスクで使用します）');
+    if (name && name.trim()) {
+      myName = name.trim();
+      localStorage.setItem('myName', myName);
+      updateMyNameDisplay();
+    }
+  }
+  return myName;
+}
+
+function changeMyName() {
+  const name = prompt('名前を変更', myName);
+  if (name && name.trim()) {
+    myName = name.trim();
+    localStorage.setItem('myName', myName);
+    updateMyNameDisplay();
+    if (currentView === 'my') {
+      updateHeader('マイタスク（' + myName + '）', '');
+      renderBoard();
+    }
+  }
+}
+
+function updateMyNameDisplay() {
+  const el = document.getElementById('my-name-display');
+  el.textContent = myName ? '👤 ' + myName + '（変更）' : '名前を設定';
+}
 
 // === API ヘルパー ===
 async function api(url, method = 'GET', body = null) {
@@ -300,6 +332,7 @@ async function init() {
   document.getElementById('header-dot').style.display = 'none';
   renderProjects();
   renderStatusSelect();
+  updateMyNameDisplay();
   renderBoard();
 }
 
@@ -339,13 +372,17 @@ function selectProject(id) {
 }
 
 function switchView(view, el) {
+  if (view === 'my') {
+    ensureMyName();
+    if (!myName) return;
+  }
   currentView = view;
   currentProjectId = null;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   renderProjects();
   if (view === 'home') updateHeader('すべてのタスク', '');
-  else updateHeader('マイタスク', '');
+  else updateHeader('マイタスク（' + myName + '）', '');
   renderBoard();
   closeSidebarMobile();
 }
@@ -451,6 +488,7 @@ function submitNewColumn() {
 function getFilteredTasks() {
   const query = document.getElementById('search-input').value.toLowerCase();
   return tasks.filter(t => {
+    if (currentView === 'my' && t.assignee !== myName) return false;
     if (currentView !== 'home' && currentView !== 'my' && t.projectId !== currentView) return false;
     if (query && !t.title.toLowerCase().includes(query) && !(t.desc||'').toLowerCase().includes(query)) return false;
     return true;
