@@ -175,11 +175,11 @@ textarea{resize:vertical;min-height:70px}
     </nav>
     <div class="sidebar-divider"></div>
     <div class="sidebar-section-header">
-      <span>プロジェクト</span>
-      <button onclick="toggleProjectAdd()" title="プロジェクト追加">+</button>
+      <span>メンバー</span>
+      <button onclick="toggleProjectAdd()" title="メンバー追加">+</button>
     </div>
     <div class="project-add-form" id="project-add-form">
-      <input type="text" id="new-project-name" placeholder="プロジェクト名" onkeydown="if(event.key==='Enter')addProject()">
+      <input type="text" id="new-project-name" placeholder="メンバー名" onkeydown="if(event.key==='Enter')addProject()">
       <button onclick="addProject()">追加</button>
     </div>
     <div class="project-list" id="project-list"></div>
@@ -250,7 +250,7 @@ textarea{resize:vertical;min-height:70px}
         <select id="modal-status"></select>
       </div>
       <div class="form-group">
-        <label>プロジェクト</label>
+        <label>メンバー</label>
         <select id="modal-project"></select>
       </div>
     </div>
@@ -367,7 +367,7 @@ async function addProject() {
 }
 
 async function deleteProject(id) {
-  if (!confirm('このプロジェクトを削除しますか？関連タスクは残ります。')) return;
+  if (!confirm('このメンバーを削除しますか？関連タスクは残ります。')) return;
   await api('/api/projects/' + id, 'DELETE');
   projects = projects.filter(p => p.id !== id);
   if (currentView === id) switchView('home', document.querySelector('.nav-item[data-view="home"]'));
@@ -645,7 +645,7 @@ function renderStatusSelect() {
 
 function renderProjectSelect() {
   const sel = document.getElementById('modal-project');
-  sel.innerHTML = '<option value="">プロジェクトなし</option>' +
+  sel.innerHTML = '<option value="">メンバーなし</option>' +
     projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
 }
 

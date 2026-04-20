@@ -38,8 +38,8 @@ const DEFAULT_COLUMNS = [
 ];
 
 const DEFAULT_PROJECTS = [
-  { id: 'proj_default1', name: '個人プロジェクト', color: '#6366f1' },
-  { id: 'proj_default2', name: '仕事', color: '#ec4899' }
+  { id: 'proj_default1', name: '沼田', color: '#6366f1' },
+  { id: 'proj_default2', name: '池田', color: '#ec4899' }
 ];
 
 // ========== Projects ==========
@@ -49,7 +49,7 @@ app.get('/api/projects', (req, res) => {
 
 app.post('/api/projects', (req, res) => {
   const { name, color } = req.body;
-  if (!name || !name.trim()) return res.status(400).json({ error: 'プロジェクト名を入力してください' });
+  if (!name || !name.trim()) return res.status(400).json({ error: 'メンバー名を入力してください' });
   const projects = loadJSON(PROJECTS_FILE, DEFAULT_PROJECTS);
   const project = { id: 'proj_' + genId(), name: name.trim(), color: color || '#6366f1' };
   projects.push(project);
