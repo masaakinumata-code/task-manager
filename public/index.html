@@ -110,6 +110,7 @@ button{cursor:pointer;font-family:inherit}
 .task-card-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .tag{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500;white-space:nowrap}
 .tag-category{background:#ede9fe;color:#6d28d9}
+.tag-channel{background:#dbeafe;color:#1d4ed8}
 .priority-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .priority-dot.high{background:var(--danger)}
 .priority-dot.medium{background:var(--warning)}
@@ -220,6 +221,19 @@ textarea{resize:vertical;min-height:70px}
       <textarea id="modal-desc" placeholder="説明（任意）"></textarea>
     </div>
     <div class="form-row">
+      <div class="form-group">
+        <label>媒体</label>
+        <select id="modal-channel">
+          <option value="">なし</option>
+          <option value="Shopify">Shopify</option>
+          <option value="楽天">楽天</option>
+          <option value="Yahoo!">Yahoo!</option>
+          <option value="メルカリ">メルカリ</option>
+          <option value="Amazon">Amazon</option>
+          <option value="Tiktok">Tiktok</option>
+          <option value="ANA">ANA</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>優先度</label>
         <select id="modal-priority">
@@ -564,6 +578,7 @@ function renderCard(t) {
       <div class="task-card-title">${esc(t.title)}</div>
       <div class="task-card-meta">
         <span class="priority-dot ${t.priority}" title="${{high:'高',medium:'中',low:'低'}[t.priority] || ''}"></span>
+        ${t.channel ? `<span class="tag tag-channel">${esc(t.channel)}</span>` : ''}
       </div>
       <div class="task-card-footer">
         ${proj ? `<span style="font-size:11px;color:${proj.color}">● ${esc(proj.name)}</span>` : '<span></span>'}
@@ -708,6 +723,7 @@ function openAddModal() {
   document.getElementById('modal-task-id').value = '';
   document.getElementById('modal-name').value = '';
   document.getElementById('modal-desc').value = '';
+  document.getElementById('modal-channel').value = '';
   document.getElementById('modal-priority').value = 'medium';
   document.getElementById('modal-due').value = '';
   document.getElementById('modal-assignee').value = '';
@@ -728,6 +744,7 @@ function openEditModal(id) {
   document.getElementById('modal-task-id').value = id;
   document.getElementById('modal-name').value = t.title;
   document.getElementById('modal-desc').value = t.desc || '';
+  document.getElementById('modal-channel').value = t.channel || '';
   document.getElementById('modal-priority').value = t.priority;
   document.getElementById('modal-due').value = t.due || '';
   document.getElementById('modal-assignee').value = t.assignee || '';
@@ -752,6 +769,7 @@ async function saveTask() {
     title,
     desc: document.getElementById('modal-desc').value.trim(),
     category: '',
+    channel: document.getElementById('modal-channel').value,
     priority: document.getElementById('modal-priority').value,
     due: document.getElementById('modal-due').value,
     assignee: document.getElementById('modal-assignee').value.trim(),

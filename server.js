@@ -104,7 +104,7 @@ function createPgStorage() {
   function toTask(r) {
     return {
       id: r.id, title: r.title, desc: r.description, category: r.category,
-      priority: r.priority, due: r.due, assignee: r.assignee,
+      channel: r.channel || '', priority: r.priority, due: r.due, assignee: r.assignee,
       status: r.status, projectId: r.project_id, order: r.sort_order,
       createdAt: r.created_at
     };
@@ -114,7 +114,8 @@ function createPgStorage() {
     async init() {
       await pool.query(`CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT NOT NULL)`);
       await pool.query(`CREATE TABLE IF NOT EXISTS columns_ (id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT NOT NULL, sort_order INT DEFAULT 0)`);
-      await pool.query(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT DEFAULT '', category TEXT DEFAULT '', priority TEXT DEFAULT 'medium', due TEXT DEFAULT '', assignee TEXT DEFAULT '', status TEXT DEFAULT 'todo', project_id TEXT DEFAULT '', sort_order INT DEFAULT 0, created_at TEXT DEFAULT '')`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT DEFAULT '', category TEXT DEFAULT '', channel TEXT DEFAULT '', priority TEXT DEFAULT 'medium', due TEXT DEFAULT '', assignee TEXT DEFAULT '', status TEXT DEFAULT 'todo', project_id TEXT DEFAULT '', sort_order INT DEFAULT 0, created_at TEXT DEFAULT '')`);
+      await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT ''`).catch(() => {});
       const { rows: colCount } = await pool.query('SELECT COUNT(*) FROM columns_');
       if (parseInt(colCount[0].count) === 0) {
         for (let i = 0; i < DEFAULT_COLUMNS.length; i++) {
@@ -148,8 +149,8 @@ function createPgStorage() {
     },
     async addTask(task) {
       await pool.query(
-        'INSERT INTO tasks (id, title, description, category, priority, due, assignee, status, project_id, sort_order, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
-        [task.id, task.title, task.desc, task.category, task.priority, task.due, task.assignee, task.status, task.projectId, task.order, task.createdAt]
+        'INSERT INTO tasks (id, title, description, category, channel, priority, due, assignee, status, project_id, sort_order, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+        [task.id, task.title, task.desc, task.category, task.channel, task.priority, task.due, task.assignee, task.status, task.projectId, task.order, task.createdAt]
       );
     },
     async updateTask(id, data) {
@@ -160,6 +161,7 @@ function createPgStorage() {
         title: data.title !== undefined ? data.title : t.title,
         description: data.desc !== undefined ? data.desc : t.description,
         category: data.category !== undefined ? data.category : t.category,
+        channel: data.channel !== undefined ? data.channel : (t.channel || ''),
         priority: data.priority !== undefined ? data.priority : t.priority,
         due: data.due !== undefined ? data.due : t.due,
         assignee: data.assignee !== undefined ? data.assignee : t.assignee,
@@ -167,10 +169,10 @@ function createPgStorage() {
         project_id: data.projectId !== undefined ? data.projectId : t.project_id
       };
       await pool.query(
-        'UPDATE tasks SET title=$1, description=$2, category=$3, priority=$4, due=$5, assignee=$6, status=$7, project_id=$8 WHERE id=$9',
-        [u.title, u.description, u.category, u.priority, u.due, u.assignee, u.status, u.project_id, id]
+        'UPDATE tasks SET title=$1, description=$2, category=$3, channel=$4, priority=$5, due=$6, assignee=$7, status=$8, project_id=$9 WHERE id=$10',
+        [u.title, u.description, u.category, u.channel, u.priority, u.due, u.assignee, u.status, u.project_id, id]
       );
-      return { id, title: u.title, desc: u.description, category: u.category, priority: u.priority, due: u.due, assignee: u.assignee, status: u.status, projectId: u.project_id, order: t.sort_order, createdAt: t.created_at };
+      return { id, title: u.title, desc: u.description, category: u.category, channel: u.channel, priority: u.priority, due: u.due, assignee: u.assignee, status: u.status, projectId: u.project_id, order: t.sort_order, createdAt: t.created_at };
     },
     async deleteTask(id) { await pool.query('DELETE FROM tasks WHERE id = $1', [id]); },
     async reorderTask(taskId, newStatus, insertIndex) {
@@ -253,13 +255,13 @@ app.put('/api/tasks/reorder', async (req, res) => {
 
 app.post('/api/tasks', async (req, res) => {
   try {
-    const { title, desc, category, priority, due, assignee, status, projectId } = req.body;
+    const { title, desc, category, channel, priority, due, assignee, status, projectId } = req.body;
     if (!title || !title.trim()) return res.status(400).json({ error: 'タスク名を入力してください' });
     const taskStatus = status || 'todo';
     const order = await storage.getMinOrder(taskStatus);
     const task = {
       id: genId(), title: title.trim(), desc: desc || '', category: category || '',
-      priority: priority || 'medium', due: due || '', assignee: assignee || '',
+      channel: channel || '', priority: priority || 'medium', due: due || '', assignee: assignee || '',
       status: taskStatus, projectId: projectId || '',
       order, createdAt: new Date().toISOString()
     };
