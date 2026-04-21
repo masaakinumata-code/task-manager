@@ -112,6 +112,9 @@ function createPgStorage() {
 
   return {
     async init() {
+      // DB接続確認ログ
+      const { rows: dbCheck } = await pool.query('SELECT current_database(), current_schema()');
+      console.log('DB接続先:', dbCheck[0]);
       await pool.query(`CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT NOT NULL)`);
       await pool.query(`CREATE TABLE IF NOT EXISTS columns_ (id TEXT PRIMARY KEY, name TEXT NOT NULL, color TEXT NOT NULL, sort_order INT DEFAULT 0)`);
       await pool.query(`CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT DEFAULT '', category TEXT DEFAULT '', channel TEXT DEFAULT '', priority TEXT DEFAULT 'medium', due TEXT DEFAULT '', assignee TEXT DEFAULT '', status TEXT DEFAULT 'todo', project_id TEXT DEFAULT '', sort_order INT DEFAULT 0, created_at TEXT DEFAULT '')`);
