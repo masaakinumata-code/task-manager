@@ -297,7 +297,7 @@ async function start() {
   }
   await storage.init();
   app.listen(PORT, () => {
-    console.log(`ECタスク管理 が起動しました: http://localhost:${PORT}`);
+    console.log(`タスク管理 が起動しました: http://localhost:${PORT}`);
   });
 }
 
