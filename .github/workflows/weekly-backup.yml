@@ -1,0 +1,39 @@
+name: Weekly Backup
+
+on:
+  schedule:
+    # 毎週月曜 AM9:00 (JST) = 日曜 00:00 (UTC)
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch backup from API
+        run: |
+          mkdir -p backups
+          FILENAME="backups/backup-$(date +%Y-%m-%d).json"
+          curl -s "${{ secrets.APP_URL }}/api/backup?token=${{ secrets.BACKUP_TOKEN }}" > "$FILENAME"
+          # 正常なJSONか確認
+          if ! python3 -c "import json; json.load(open('$FILENAME'))"; then
+            echo "Backup failed: invalid JSON"
+            cat "$FILENAME"
+            exit 1
+          fi
+          echo "Backup saved to $FILENAME"
+
+      - name: Remove old backups (keep last 8 weeks)
+        run: |
+          cd backups
+          ls -t backup-*.json | tail -n +9 | xargs -r rm
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "backup: $(date +%Y-%m-%d) weekly backup"
+          git push

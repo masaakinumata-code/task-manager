@@ -286,6 +286,62 @@ app.delete('/api/tasks/:id', async (req, res) => {
   catch (e) { console.error(e); res.status(500).json({ error: 'サーバーエラー' }); }
 });
 
+// --- バックアップ（全データエクスポート） ---
+app.get('/api/backup', async (req, res) => {
+  const token = req.query.token;
+  if (!process.env.BACKUP_TOKEN || token !== process.env.BACKUP_TOKEN) {
+    return res.status(401).json({ error: '認証エラー' });
+  }
+  try {
+    const projects = await storage.getProjects();
+    const columns = await storage.getColumns();
+    const tasks = await storage.getTasks();
+    res.json({
+      exportedAt: new Date().toISOString(),
+      projects,
+      columns,
+      tasks
+    });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'バックアップ失敗' }); }
+});
+
+// --- バックアップからリストア ---
+app.post('/api/restore', async (req, res) => {
+  const token = req.query.token;
+  if (!process.env.BACKUP_TOKEN || token !== process.env.BACKUP_TOKEN) {
+    return res.status(401).json({ error: '認証エラー' });
+  }
+  try {
+    const { projects, columns, tasks } = req.body;
+    // リストアはPgモードのみ対応
+    if (!process.env.DATABASE_URL) {
+      return res.status(400).json({ error: 'PostgreSQLモードでのみリストア可能です' });
+    }
+    const { Pool } = require('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    if (projects && projects.length > 0) {
+      for (const p of projects) {
+        await pool.query('INSERT INTO projects (id, name, color) VALUES ($1,$2,$3) ON CONFLICT (id) DO UPDATE SET name=$2, color=$3', [p.id, p.name, p.color]);
+      }
+    }
+    if (columns && columns.length > 0) {
+      for (let i = 0; i < columns.length; i++) {
+        const c = columns[i];
+        await pool.query('INSERT INTO columns_ (id, name, color, sort_order) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO UPDATE SET name=$2, color=$3, sort_order=$4', [c.id, c.name, c.color, i]);
+      }
+    }
+    if (tasks && tasks.length > 0) {
+      for (const t of tasks) {
+        await pool.query(
+          'INSERT INTO tasks (id, title, description, category, channel, priority, due, assignee, status, project_id, sort_order, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO UPDATE SET title=$2, description=$3, category=$4, channel=$5, priority=$6, due=$7, assignee=$8, status=$9, project_id=$10, sort_order=$11, created_at=$12',
+          [t.id, t.title, t.desc || t.description || '', t.category || '', t.channel || '', t.priority || 'medium', t.due || '', t.assignee || '', t.status || 'todo', t.projectId || t.project_id || '', t.order ?? t.sort_order ?? 0, t.createdAt || t.created_at || '']
+        );
+      }
+    }
+    res.json({ success: true, restored: { projects: projects?.length || 0, columns: columns?.length || 0, tasks: tasks?.length || 0 } });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'リストア失敗' }); }
+});
+
 // --- 起動 ---
 async function start() {
   if (process.env.DATABASE_URL) {
